@@ -53,12 +53,13 @@ func pushChart(chartPath, href, host, username, password string) error {
 		}
 		pushOpts = append(pushOpts, registry.PushOptProvData(provBytes))
 	}
-
+	// disable strict mode for configuring chartName in repo
+	withStrictMode := registry.PushOptStrictMode(false)
 	// add chartname and version to url
 	ref := fmt.Sprintf("%s:%s",
-		path.Join(strings.TrimPrefix(href, fmt.Sprintf("%s://", registry.OCIScheme)), meta.Name()),
+		path.Join(strings.TrimPrefix(href, fmt.Sprintf("%s://", registry.OCIScheme)), "custom-chart"),
 		meta.Metadata.Version)
-	_, err = client.Push(chartBytes, ref)
+	_, err = client.Push(chartBytes, ref, withStrictMode)
 	if err != nil {
 		println(err)
 		return err

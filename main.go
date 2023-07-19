@@ -228,13 +228,13 @@ func runShow(chartURL string, client *action.Show) (string, error) {
 }
 
 func main() {
-	host := "https://registry-1.docker.io"
-	username := "ashexp"
-	password := "dckr_pat_0t9-gLzcn_8fPdf10QNzzaOYNog"
-	chartPath := "chart-1.0.2410-DEPLOY.tgz"
-	version:= "1.0.2410-DEPLOY"
-	chartname:= "chart"
-	href := "registry-1.docker.io/ashexp"
+	host := ""
+	username := ""
+	password := ""
+	chartPath := ""
+	version:= ""
+	chartname:= ""
+	href := ""
 
 	err := pushChart(chartPath, href, host, username, password, chartname)
 	if err != nil {

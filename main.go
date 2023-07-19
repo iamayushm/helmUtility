@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"context"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
+	orasRegistry "oras.land/oras-go/pkg/registry"
+	"oras.land/oras-go/pkg/registry/remote"
 	"io/ioutil"
 	"os"
 	"path"
@@ -81,7 +84,7 @@ func pullChart(href, host, username, password, chartname, version string) error 
 		return err
 	}
 	err = client.Login(host,
-		registry.LoginOptBasicAuth(username, password), registry.LoginOptInsecure(true))
+		registry.LoginOptBasicAuth(username, password))
 	if err != nil {
 		return err
 	}
@@ -103,6 +106,7 @@ func pullChart(href, host, username, password, chartname, version string) error 
 	log.Print(bytes.NewBuffer(chartDetails.Prov.Data))
 	return nil
 }
+
 func helmShowReadme(chartURL, version string) (string, error) {
 	actionConfig := new(action.Configuration)
 	err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), log.Printf)
@@ -145,41 +149,19 @@ func helmShowValues(chartURL, version string) (string, error) {
 	return output, nil
 }
 
-func main() {
-	host := ""
-	username := ""
-	password := ""
-	chartPath := ""
-	version:= ""
-	chartname:= ""
-	href := ""
+// fetchOCIChartTagsList gives example snippets for listing tags in the repository without pagination.
+func fetchOCIChartTagsList (repoURL string) ([]string, error) {
+	repo, err := remote.NewRepository(repoURL)
+	if err != nil {
+		return nil, err // Handle error
+	}
 
-	err := pushChart(chartPath, href, host, username, password, chartname)
+	ctx := context.Background()
+	tags, err := orasRegistry.Tags(ctx, repo)
 	if err != nil {
-		return
+		return nil, err // Handle error
 	}
-	println("Chart successfully pushed to helm registry")
-	err = pullChart(href, host, username, password, chartname, version)
-	if err != nil {
-		return
-	}
-	println("Chart successfully pulled from helm registry")
-	// add chartname and version to url
-	ref := fmt.Sprintf("%s://%s/%s", registry.OCIScheme, strings.TrimSpace(href), strings.TrimSpace(chartname))
-	readme, err := helmShowReadme(ref, version)
-	if err != nil {
-		fmt.Printf("Failed to retrieve the readme: %v\n", err)
-	}
-	fmt.Println("Readme:")
-	fmt.Println(readme)
-
-	values, err := helmShowValues(ref, version)
-	if err != nil {
-		fmt.Printf("Failed to retrieve the values: %v\n", err)
-	}
-	fmt.Println("Values:")
-	fmt.Println(values)
-
+	return tags, nil
 }
 
 func addRegistryClient(client *action.Show) error {
@@ -243,4 +225,49 @@ func runShow(chartURL string, client *action.Show) (string, error) {
 		return "", err
 	}
 	return client.Run(cp)
+}
+
+func main() {
+	host := "https://registry-1.docker.io"
+	username := "ashexp"
+	password := "dckr_pat_0t9-gLzcn_8fPdf10QNzzaOYNog"
+	chartPath := "chart-1.0.2410-DEPLOY.tgz"
+	version:= "1.0.2410-DEPLOY"
+	chartname:= "chart"
+	href := "registry-1.docker.io/ashexp"
+
+	err := pushChart(chartPath, href, host, username, password, chartname)
+	if err != nil {
+		return
+	}
+	println("Chart successfully pushed to helm registry")
+	err = pullChart(href, host, username, password, chartname, version)
+	if err != nil {
+		return
+	}
+	println("Chart successfully pulled from helm registry")
+	// add chartname and version to url
+	ref := fmt.Sprintf("%s://%s/%s", registry.OCIScheme, strings.TrimSpace(href), strings.TrimSpace(chartname))
+	readme, err := helmShowReadme(ref, version)
+	if err != nil {
+		fmt.Printf("Failed to retrieve the readme: %v\n", err)
+	}
+	fmt.Println("Readme:")
+	fmt.Println(readme)
+
+	values, err := helmShowValues(ref, version)
+	if err != nil {
+		fmt.Printf("Failed to retrieve the values: %v\n", err)
+	}
+	fmt.Println("Values:")
+	fmt.Println(values)
+	ref = fmt.Sprintf("%s/%s", strings.TrimSpace(href), strings.TrimSpace(chartname))
+	tagsList, err := fetchOCIChartTagsList(ref)
+	if err != nil {
+		fmt.Printf("Failed to retrieve the tags: %v\n", err)
+	}
+	fmt.Println("Tags:")
+	for _, tag := range tagsList {
+		fmt.Println(tag)
+	}
 }
